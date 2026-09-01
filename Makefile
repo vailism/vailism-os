@@ -2,6 +2,7 @@
 
 CC = /opt/homebrew/opt/llvm/bin/clang
 LD = /opt/homebrew/bin/ld.lld
+NASM = /opt/homebrew/bin/nasm
 QEMU = /opt/homebrew/bin/qemu-system-x86_64
 XORRISO = /opt/homebrew/bin/xorriso
 
@@ -11,6 +12,9 @@ ifeq ($(wildcard $(CC)),)
 endif
 ifeq ($(wildcard $(LD)),)
     LD = ld.lld
+endif
+ifeq ($(wildcard $(NASM)),)
+    NASM = nasm
 endif
 ifeq ($(wildcard $(QEMU)),)
     QEMU = qemu-system-x86_64
@@ -47,23 +51,33 @@ ISO_DIR   = $(BUILD_DIR)/iso_root
 KERNEL    = $(BUILD_DIR)/vailism-kernel.elf
 ISO       = $(BUILD_DIR)/vailism-os.iso
 
-SRCS = $(wildcard src/kernel/*.c)
-OBJS = $(patsubst src/kernel/%.c, $(BUILD_DIR)/%.o, $(SRCS))
+C_SRCS   = $(wildcard src/kernel/*.c)
+ASM_SRCS = $(wildcard src/arch/x86_64/*.asm)
+
+C_OBJS   = $(patsubst src/kernel/%.c, $(BUILD_DIR)/%.o, $(C_SRCS))
+ASM_OBJS = $(patsubst src/arch/x86_64/%.asm, $(BUILD_DIR)/%_asm.o, $(ASM_SRCS))
+ALL_OBJS = $(C_OBJS) $(ASM_OBJS)
 
 .PHONY: all clean iso run run-nographic
 
 all: $(ISO)
 
-# Compile C source files into freestanding x86_64 ELF object files
+# Compile C sources into 64-bit ELF objects
 $(BUILD_DIR)/%.o: src/kernel/%.c
 	@mkdir -p $(BUILD_DIR)
 	@echo " [CC] $<"
 	@$(CC) $(CFLAGS) -c $< -o $@
 
-# Link kernel into ELF64 executable
-$(KERNEL): $(OBJS) linker.ld
+# Assemble x86_64 assembly sources with NASM
+$(BUILD_DIR)/%_asm.o: src/arch/x86_64/%.asm
+	@mkdir -p $(BUILD_DIR)
+	@echo " [NASM] $<"
+	@$(NASM) -f elf64 $< -o $@
+
+# Link kernel into 64-bit ELF executable
+$(KERNEL): $(ALL_OBJS) linker.ld
 	@echo " [LD] $@"
-	@$(LD) $(LDFLAGS) $(OBJS) -o $@
+	@$(LD) $(LDFLAGS) $(ALL_OBJS) -o $@
 
 # Build bootable ISO using xorriso and Limine
 $(ISO): $(KERNEL) limine.conf
@@ -89,8 +103,8 @@ iso: $(ISO)
 
 # Run OS in QEMU with GUI window and serial output forwarded to terminal
 run: $(ISO)
-	@echo "Starting Vailism OS in QEMU..."
-	$(QEMU) -cdrom $(ISO) -serial stdio -m 512M
+	@echo "Starting Vailism OS in QEMU (Press Ctrl+C in terminal or close window to exit)..."
+	$(QEMU) -cdrom $(ISO) -serial stdio -m 512M -vga std
 
 # Run OS in headless/nographic mode (serial only)
 run-nographic: $(ISO)

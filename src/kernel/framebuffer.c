@@ -101,6 +101,14 @@ void fb_putchar(char c) {
         return;
     }
 
+    if (c == '\b') {
+        if (g_cursor_x >= PADDING_X + FONT_WIDTH) {
+            g_cursor_x -= FONT_WIDTH;
+            draw_char_at(' ', g_cursor_x, g_cursor_y, g_bg_color, g_bg_color);
+        }
+        return;
+    }
+
     if (c == '\t') {
         for (int i = 0; i < 4; i++) {
             fb_putchar(' ');
