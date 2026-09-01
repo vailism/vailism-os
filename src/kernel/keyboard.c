@@ -3,6 +3,7 @@
 #include "../include/io.h"
 #include "../include/serial.h"
 #include "../include/framebuffer.h"
+#include "../include/shell.h"
 
 static bool g_shift_pressed = false;
 static bool g_caps_lock = false;
@@ -67,12 +68,7 @@ static void keyboard_callback(struct registers *regs) {
     }
 
     if (c != 0) {
-        // Echo character to both graphical screen and serial console!
-        fb_putchar(c);
-        if (c == '\n') {
-            serial_putchar('\r');
-        }
-        serial_putchar(c);
+        shell_handle_char(c);
     }
 }
 

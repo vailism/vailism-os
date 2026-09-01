@@ -14,6 +14,8 @@
 #include "../include/scheduler.h"
 #include "../include/ata.h"
 #include "../include/vfs.h"
+#include "../include/syscall.h"
+#include "../include/shell.h"
 
 // 1. Tell Limine we support Base Revision 3
 __attribute__((used, section(".requests")))
@@ -252,21 +254,27 @@ void kmain(void) {
         }
     }
 
-    // 9. Enable CPU Interrupts (STI)
+    // 9. Phase 6: System Call Interface & Interactive Shell
+    syscall_init();
+
+    fb_set_color(FB_COLOR_GREEN, FB_COLOR_BG);
+    fb_puts("[ OK ] ");
+    fb_set_color(FB_COLOR_WHITE, FB_COLOR_BG);
+    fb_puts("Fast x86_64 syscall/sysret MSR interface registered\n\n");
+
+    // 10. Enable CPU Interrupts (STI)
     __asm__ volatile ("sti");
     serial_puts("[CPU] Interrupts enabled globally (STI executed).\n");
 
     fb_set_color(FB_COLOR_YELLOW, FB_COLOR_BG);
-    fb_puts("Phase 5 Milestone Complete: Storage & Virtual Filesystem Operational!\n");
+    fb_puts("Phase 6 Milestone Complete: Userspace ABI & Interactive Shell Active!\n");
     fb_set_color(FB_COLOR_MUTED, FB_COLOR_BG);
-    fb_puts("Type commands or text below:\n\n");
+    fb_puts("Type 'help' to see all available commands, 'cat /etc/os-release', 'mem', etc.:\n\n");
 
-    // Interactive Prompt
-    fb_set_color(FB_COLOR_CYAN, FB_COLOR_BG);
-    fb_puts("vailism-os> ");
-    fb_set_color(FB_COLOR_WHITE, FB_COLOR_BG);
+    // Initialize Interactive Shell
+    shell_init();
 
-    serial_puts("\n[KERNEL] System fully initialized. Entering idle wait loop.\n");
+    serial_puts("\n[KERNEL] System fully initialized. Interactive shell active.\n");
 
     // Main idle loop (Thread 0)
     for (;;) {

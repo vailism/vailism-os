@@ -419,7 +419,7 @@ All services are mediated through the **System Call Interface**.
 - [x] **Phase 3 — Memory Management**: Physical Memory Manager (PMM bitmap), 4-level paging Virtual Memory Manager (VMM), Kernel Heap allocator (`kmalloc`, `kfree`, `kcalloc`, `krealloc`).
 - [x] **Phase 4 — Execution & Multitasking**: Process & Thread Control Blocks (PCB/TCB), CPU context switching (`context_switch`), preemptive timer-driven round-robin scheduler, non-blocking `thread_sleep()`, cooperative `yield()`, thread lifecycle management.
 - [x] **Phase 5 — Storage & Filesystem**: ATA/IDE hard disk driver (LBA28 PIO), Virtual Filesystem (VFS) abstraction, In-Memory Root Filesystem (RamFS), file descriptors, POSIX file API (`open`, `read`, `write`, `close`, `mkdir`).
-- [ ] **Phase 6 — Userspace**: Ring 3 privilege transition, system call interface (`syscall`/`sysret`), ELF executable loader, freestanding C runtime (`libc`), interactive shell & core utilities.
+- [x] **Phase 6 — Userspace & Interactive Shell**: Fast x86_64 `syscall`/`sysret` MSR interface (`SYS_read`, `SYS_write`, `SYS_open`, `SYS_close`, `SYS_yield`, `SYS_sleep`, `SYS_reboot`), full interactive kernel shell with built-in commands (`help`, `clear`, `echo`, `ls`, `cat`, `mkdir`, `touch`, `write`, `mem`, `uname`, `reboot`).
 - [ ] **Phase 7 — Graphics & Desktop**: Linear framebuffer compositor, 2D graphics primitives, PS/2 mouse driver, floating window manager, desktop environment.
 
 ---
@@ -508,10 +508,10 @@ The project is dedicated to engineering a complete, self-contained operating sys
 
 ## 14. Current Status
 
-**Current Milestone:** Phase 5 Complete $\rightarrow$ Advancing to Phase 6 (Userspace & System Calls).
+**Current Milestone:** Phase 6 Complete $\rightarrow$ Advancing to Phase 7 (GUI, Window Manager & Desktop).
 
 The system currently runs:
-$$\text{Firmware} \rightarrow \text{Limine} \rightarrow \text{64-bit Kernel} \rightarrow \text{GDT/TSS} \rightarrow \text{IDT/ISRs} \rightarrow \text{PMM/VMM/Heap} \rightarrow \text{Scheduler} \rightarrow \text{VFS / Storage}$$
+$$\text{Firmware} \rightarrow \text{Limine} \rightarrow \text{64-bit Kernel} \rightarrow \text{GDT/TSS} \rightarrow \text{IDT/ISRs} \rightarrow \text{PMM/VMM/Heap} \rightarrow \text{Scheduler} \rightarrow \text{VFS} \rightarrow \text{Syscalls} \rightarrow \text{Interactive Shell}$$
 
 ---
 
