@@ -369,7 +369,7 @@ void gui_init(struct limine_framebuffer *fb) {
     serial_puts(gui_diag);
     serial_puts("========================================\n\n");
 
-    mouse_init(g_screen_w, g_screen_h);
+    mouse_set_screen_dimensions(g_screen_w, g_screen_h);
 
     // Create Desktop Windows positioned proportionally to screen dimensions
     uint32_t win1_w = (g_screen_w > 900) ? 500 : (g_screen_w * 48) / 100;

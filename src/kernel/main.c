@@ -6,7 +6,9 @@
 #include "../include/idt.h"
 #include "../include/pic.h"
 #include "../include/timer.h"
+#include "../include/ps2.h"
 #include "../include/keyboard.h"
+#include "../include/mouse.h"
 #include "../include/string.h"
 #include "../include/pmm.h"
 #include "../include/vmm.h"
@@ -131,12 +133,12 @@ void kmain(void) {
     idt_init();
     pic_init();
     timer_init(100);
-    keyboard_init();
+    ps2_init();
 
     fb_set_color(FB_COLOR_GREEN, FB_COLOR_BG);
     fb_puts("[ OK ] ");
     fb_set_color(FB_COLOR_WHITE, FB_COLOR_BG);
-    fb_puts("GDT/TSS, IDT (256 gates), PIC, PIT 100Hz, PS/2 Keyboard\n");
+    fb_puts("GDT/TSS, IDT (256 gates), PIC, PIT 100Hz, PS/2 8042 Controller\n");
 
     // 5. Phase 3: Memory Management
     if (memmap_request.response == NULL || hhdm_request.response == NULL) {
@@ -234,10 +236,7 @@ void kmain(void) {
     // Initialize Interactive Shell
     shell_init();
 
-    serial_puts("\n[KERNEL] All subsystems initialized. Launching Desktop GUI...\n");
-
-    // Launch Desktop GUI Compositor
-    gui_run_desktop();
+    serial_puts("\n[KERNEL] All subsystems initialized. Interactive shell active (Type 'gui' to launch Desktop).\n");
 
     // Main idle loop (Thread 0)
     for (;;) {

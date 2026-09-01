@@ -17,6 +17,16 @@ typedef struct {
 void mouse_init(uint32_t screen_width, uint32_t screen_height);
 
 /**
+ * Handle incoming byte from PS/2 auxiliary stream.
+ */
+void mouse_handle_byte(uint8_t byte);
+
+/**
+ * Update screen dimensions for cursor clamping.
+ */
+void mouse_set_screen_dimensions(uint32_t width, uint32_t height);
+
+/**
  * Get current mouse state (coordinates and button states).
  */
 mouse_state_t mouse_get_state(void);

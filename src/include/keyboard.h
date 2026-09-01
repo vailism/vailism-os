@@ -11,4 +11,9 @@
  */
 void keyboard_init(void);
 
+/**
+ * Handle incoming scancode from PS/2 data stream.
+ */
+void keyboard_handle_scancode(uint8_t scancode);
+
 #endif // KEYBOARD_H

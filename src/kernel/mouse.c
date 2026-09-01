@@ -1,4 +1,6 @@
 #include "../include/mouse.h"
+#include "../include/keyboard.h"
+#include "../include/ps2.h"
 #include "../include/idt.h"
 #include "../include/pic.h"
 #include "../include/io.h"
@@ -15,57 +17,30 @@ static uint8_t g_mouse_packet[3];
 static uint32_t g_mouse_diag_count = 0;
 #define MOUSE_DIAG_LIMIT 10
 
-static void mouse_wait_write(void) {
-    uint32_t timeout = 100000;
-    while (timeout--) {
-        if ((inb(0x64) & 0x02) == 0) return;
-        io_wait();
-    }
+void mouse_set_screen_dimensions(uint32_t width, uint32_t height) {
+    g_screen_w = width;
+    g_screen_h = height;
+    if (g_mouse_state.x >= (int32_t)g_screen_w) g_mouse_state.x = g_screen_w / 2;
+    if (g_mouse_state.y >= (int32_t)g_screen_h) g_mouse_state.y = g_screen_h / 2;
 }
 
-static void mouse_wait_read(void) {
-    uint32_t timeout = 100000;
-    while (timeout--) {
-        if ((inb(0x64) & 0x01) == 1) return;
-        io_wait();
-    }
-}
-
-static void mouse_write(uint8_t val) {
-    mouse_wait_write();
-    outb(0x64, 0xD4); // Tell 8042 controller next byte goes to mouse auxiliary device
-    mouse_wait_write();
-    outb(0x60, val);
-}
-
-static uint8_t mouse_read(void) {
-    mouse_wait_read();
-    return inb(0x60);
-}
-
-static void mouse_callback(struct registers *regs) {
-    (void)regs;
-    uint8_t status = inb(0x64);
-    if ((status & 0x01) == 0) return;
-
-    uint8_t mouse_in = inb(0x60);
-
+void mouse_handle_byte(uint8_t byte) {
     switch (g_mouse_cycle) {
         case 0:
-            // First byte: Bit 3 is always 1 in valid PS/2 packets
-            if ((mouse_in & 0x08) == 0x08) {
-                g_mouse_packet[0] = mouse_in;
+            // First byte: Bit 3 is always 1 in valid standard PS/2 packets
+            if ((byte & 0x08) == 0x08) {
+                g_mouse_packet[0] = byte;
                 g_mouse_cycle = 1;
             }
             break;
 
         case 1:
-            g_mouse_packet[1] = mouse_in;
+            g_mouse_packet[1] = byte;
             g_mouse_cycle = 2;
             break;
 
         case 2:
-            g_mouse_packet[2] = mouse_in;
+            g_mouse_packet[2] = byte;
             g_mouse_cycle = 0;
 
             // Decode 3-byte packet
@@ -108,6 +83,22 @@ static void mouse_callback(struct registers *regs) {
     }
 }
 
+static void mouse_callback(struct registers *regs) {
+    (void)regs;
+    uint8_t status = inb(PS2_STATUS_PORT);
+    if ((status & PS2_STATUS_OUTPUT_BUFFER_FULL) == 0) return;
+
+    uint8_t data = inb(PS2_DATA_PORT);
+
+    // If status bit 5 is clear, data belongs to the Keyboard
+    if ((status & PS2_STATUS_AUX_DATA) == 0) {
+        keyboard_handle_scancode(data);
+        return;
+    }
+
+    mouse_handle_byte(data);
+}
+
 void mouse_init(uint32_t screen_width, uint32_t screen_height) {
     g_screen_w = screen_width;
     g_screen_h = screen_height;
@@ -119,49 +110,27 @@ void mouse_init(uint32_t screen_width, uint32_t screen_height) {
     g_mouse_cycle = 0;
     g_mouse_diag_count = 0;
 
-    // 0. Flush any pending data in the 8042 controller buffer
-    for (int i = 0; i < 32 && (inb(0x64) & 0x01); i++) {
-        inb(0x60);
-        io_wait();
-    }
+    // Send command 0xF6 (Set Defaults) to mouse device
+    ps2_mouse_write(0xF6);
+    uint8_t ack1 = ps2_read_data();
+    char diag[64];
+    ksnprintf(diag, sizeof(diag), "[MOUSE] Set Defaults ACK: 0x%x\n", (uint64_t)ack1);
+    serial_puts(diag);
 
-    // 1. Enable Auxiliary Mouse Device on 8042 controller (Command 0xA8)
-    mouse_wait_write();
-    outb(0x64, 0xA8);
-    io_wait();
+    // Send command 0xF4 (Enable Data Reporting) to mouse device
+    ps2_mouse_write(0xF4);
+    uint8_t ack2 = ps2_read_data();
+    ksnprintf(diag, sizeof(diag), "[MOUSE] Enable Streaming ACK: 0x%x\n", (uint64_t)ack2);
+    serial_puts(diag);
 
-    // 2. Read Controller Command Byte (Command 0x20)
-    mouse_wait_write();
-    outb(0x64, 0x20);
-    uint8_t status = mouse_read();
-
-    // Enable IRQ1 (bit 0) and IRQ12 (bit 1), enable clocks (clear bit 4 & 5)
-    status |= 0x03;   // Bit 0 = Keyboard IRQ1, Bit 1 = Mouse IRQ12
-    status &= ~0x30;  // Bit 4 = Enable Keyboard Clock, Bit 5 = Enable Mouse Clock
-
-    // Write back Command Byte (Command 0x60)
-    mouse_wait_write();
-    outb(0x64, 0x60);
-    mouse_wait_write();
-    outb(0x60, status);
-    io_wait();
-
-    // 3. Set Mouse Defaults (Command 0xF6 to auxiliary device)
-    mouse_write(0xF6);
-    mouse_read(); // Read ACK (0xFA)
-
-    // 4. Enable Packet Streaming (Command 0xF4 to auxiliary device)
-    mouse_write(0xF4);
-    mouse_read(); // Read ACK (0xFA)
-
-    // 5. Register IRQ12 Handler (Vector 44)
+    // Register IRQ12 Handler (Vector 44)
     register_interrupt_handler(44, mouse_callback);
 
-    // 6. Unmask IRQ2 on Master PIC (Cascade) and IRQ12 on Slave PIC
+    // Unmask Cascade IRQ2 on Master PIC and IRQ12 on Slave PIC
     pic_unmask_irq(2);
     pic_unmask_irq(12);
 
-    serial_puts("[MOUSE] PS/2 Mouse driver initialized on IRQ12 (Vector 44).\n");
+    serial_puts("[MOUSE] PS/2 Mouse driver registered on IRQ12 (Vector 44).\n");
 }
 
 mouse_state_t mouse_get_state(void) {
