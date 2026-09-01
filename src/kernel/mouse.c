@@ -41,6 +41,7 @@ static void mouse_callback(struct registers *regs) {
     (void)regs;
     uint8_t status = inb(0x64);
     if ((status & 0x01) == 0) return;
+    if ((status & 0x20) == 0) return; // Discard if byte is not from mouse (aux device)
 
     uint8_t mouse_in = inb(0x60);
 

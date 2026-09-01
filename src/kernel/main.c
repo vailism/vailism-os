@@ -234,7 +234,10 @@ void kmain(void) {
     // Initialize Interactive Shell
     shell_init();
 
-    serial_puts("\n[KERNEL] All subsystems initialized. Interactive shell active.\n");
+    serial_puts("\n[KERNEL] All subsystems initialized. Launching Desktop GUI...\n");
+
+    // Launch Desktop GUI Compositor
+    gui_run_desktop();
 
     // Main idle loop (Thread 0)
     for (;;) {
