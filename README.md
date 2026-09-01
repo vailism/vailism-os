@@ -284,17 +284,27 @@ Vailism is developed and tested inside virtual machines. The host operating syst
 └──────────────────────────────────────┘
 ```
 
-### Prerequisites (macOS Apple Silicon / Intel)
+### macOS Quick Setup (Apple Silicon M1/M2/M3/M4 & Intel)
+One-command automated setup via Homebrew:
 ```bash
-brew install llvm lld nasm qemu xorriso mtools
+make setup-mac
+# Or directly: ./scripts/setup_macos.sh
+```
+
+Manual prerequisite installation:
+```bash
+brew install llvm nasm qemu xorriso
 ```
 
 ### Build & Run Commands
 ```bash
-# Build bootable ISO and launch in QEMU with graphical window & serial stdio
+# Build bootable ISO and launch in QEMU with scaled Cocoa window & serial stdio
 make run
 
-# Build and run in headless mode (serial output only)
+# Launch directly in macOS Fullscreen mode (16:10 scaled)
+make run-fullscreen
+
+# Build and run in headless mode (serial output only in terminal)
 make run-nographic
 
 # Clean build artifacts
