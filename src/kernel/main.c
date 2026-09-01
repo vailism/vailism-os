@@ -11,6 +11,7 @@
 #include "../include/pmm.h"
 #include "../include/vmm.h"
 #include "../include/heap.h"
+#include "../include/scheduler.h"
 
 // 1. Tell Limine we support Base Revision 3
 __attribute__((used, section(".requests")))
@@ -27,7 +28,7 @@ static volatile struct limine_framebuffer_request framebuffer_request = {
     .revision = 0
 };
 
-// 4. HHDM (Higher-Half Direct Map) request
+// 4. HHDM request
 __attribute__((used, section(".requests")))
 static volatile struct limine_hhdm_request hhdm_request = {
     .id = LIMINE_HHDM_REQUEST,
@@ -75,6 +76,32 @@ static void print_dec_fb(uint64_t val) {
     for (int j = i - 1; j >= 0; j--) {
         fb_putchar(buf[j]);
     }
+}
+
+// -----------------------------------------------------------------------------
+// Multitasking Demonstration Worker Threads
+// -----------------------------------------------------------------------------
+
+static void worker_task_alpha(void *arg) {
+    (void)arg;
+    for (int i = 1; i <= 5; i++) {
+        serial_puts("[THREAD: Alpha] Iteration ");
+        print_dec_serial(i);
+        serial_puts("/5 (sleeping 200ms)\n");
+        thread_sleep(200);
+    }
+    serial_puts("[THREAD: Alpha] Finished successfully.\n");
+}
+
+static void worker_task_beta(void *arg) {
+    (void)arg;
+    for (int i = 1; i <= 5; i++) {
+        serial_puts("[THREAD: Beta ] Iteration ");
+        print_dec_serial(i);
+        serial_puts("/5 (sleeping 350ms)\n");
+        thread_sleep(350);
+    }
+    serial_puts("[THREAD: Beta ] Finished successfully.\n");
 }
 
 /**
@@ -150,28 +177,25 @@ void kmain(void) {
         }
     }
 
-    // Step A: Physical Memory Manager (PMM)
     pmm_init(memmap_request.response, hhdm_request.response->offset);
     fb_set_color(FB_COLOR_GREEN, FB_COLOR_BG);
     fb_puts("[ OK ] ");
     fb_set_color(FB_COLOR_WHITE, FB_COLOR_BG);
     fb_puts("PMM (Physical Memory Manager) bitmap allocator initialized\n");
 
-    // Step B: Virtual Memory Manager (VMM)
     vmm_init();
     fb_set_color(FB_COLOR_GREEN, FB_COLOR_BG);
     fb_puts("[ OK ] ");
     fb_set_color(FB_COLOR_WHITE, FB_COLOR_BG);
     fb_puts("VMM (4-level x86_64 paging) active\n");
 
-    // Step C: Kernel Heap Allocator
     heap_init();
     fb_set_color(FB_COLOR_GREEN, FB_COLOR_BG);
     fb_puts("[ OK ] ");
     fb_set_color(FB_COLOR_WHITE, FB_COLOR_BG);
     fb_puts("Kernel Heap allocator initialized (kmalloc / kfree available)\n\n");
 
-    // 7. Memory Stats Display
+    // Memory Stats Display
     uint64_t total_mb = pmm_get_total_memory() / (1024 * 1024);
     uint64_t free_mb  = pmm_get_free_memory() / (1024 * 1024);
     uint64_t used_mb  = pmm_get_used_memory() / (1024 * 1024);
@@ -191,40 +215,39 @@ void kmain(void) {
     fb_puts("  Free Physical RAM:  "); print_dec_fb(free_mb);  fb_puts(" MB\n");
     fb_puts("  Used Physical RAM:  "); print_dec_fb(used_mb);  fb_puts(" MB\n\n");
 
-    // 8. Heap Dynamic Allocation Self-Test
-    char *test_str = (char *)kmalloc(64);
-    if (test_str) {
-        strcpy(test_str, "Dynamic Heap Allocation (kmalloc) verification PASSED!");
-        serial_puts("[HEAP TEST] ");
-        serial_puts(test_str);
-        serial_puts("\n");
+    // 7. Phase 4: Multitasking & Scheduler Initializations
+    scheduler_init();
+    fb_set_color(FB_COLOR_GREEN, FB_COLOR_BG);
+    fb_puts("[ OK ] ");
+    fb_set_color(FB_COLOR_WHITE, FB_COLOR_BG);
+    fb_puts("Preemptive Round-Robin Scheduler initialized\n");
 
-        fb_set_color(FB_COLOR_GREEN, FB_COLOR_BG);
-        fb_puts("[ TEST ] ");
-        fb_set_color(FB_COLOR_WHITE, FB_COLOR_BG);
-        fb_puts(test_str);
-        fb_puts("\n\n");
+    // Spawn concurrent demonstration threads
+    thread_create("worker_alpha", worker_task_alpha, NULL);
+    thread_create("worker_beta",  worker_task_beta,  NULL);
 
-        kfree(test_str);
-    }
+    fb_set_color(FB_COLOR_GREEN, FB_COLOR_BG);
+    fb_puts("[ OK ] ");
+    fb_set_color(FB_COLOR_WHITE, FB_COLOR_BG);
+    fb_puts("Spawned concurrent kernel worker threads (Alpha & Beta)\n\n");
 
-    // 9. Enable CPU Interrupts (STI)
+    // 8. Enable CPU Interrupts (STI)
     __asm__ volatile ("sti");
     serial_puts("[CPU] Interrupts enabled globally (STI executed).\n");
 
     fb_set_color(FB_COLOR_YELLOW, FB_COLOR_BG);
-    fb_puts("Phase 3 Milestone Complete: Memory Management & Kernel Heap Active!\n");
+    fb_puts("Phase 4 Milestone Complete: Preemptive Multitasking Active!\n");
     fb_set_color(FB_COLOR_MUTED, FB_COLOR_BG);
-    fb_puts("Type commands or text below:\n\n");
+    fb_puts("Type commands or interact with the keyboard below:\n\n");
 
     // Interactive Prompt
     fb_set_color(FB_COLOR_CYAN, FB_COLOR_BG);
     fb_puts("vailism-os> ");
     fb_set_color(FB_COLOR_WHITE, FB_COLOR_BG);
 
-    serial_puts("\n[KERNEL] System ready. Entering main interrupt wait loop.\n");
+    serial_puts("\n[KERNEL] System fully initialized. Multitasking active.\n");
 
-    // Main low-power interrupt loop
+    // Main idle loop (Thread 0)
     for (;;) {
         __asm__ volatile ("hlt");
     }

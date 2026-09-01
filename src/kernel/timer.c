@@ -2,6 +2,7 @@
 #include "../include/idt.h"
 #include "../include/io.h"
 #include "../include/serial.h"
+#include "../include/scheduler.h"
 
 static volatile uint64_t g_timer_ticks = 0;
 static uint32_t g_timer_freq = 100;
@@ -9,6 +10,7 @@ static uint32_t g_timer_freq = 100;
 static void timer_callback(struct registers *regs) {
     (void)regs;
     g_timer_ticks++;
+    scheduler_timer_tick();
 }
 
 void timer_init(uint32_t frequency_hz) {

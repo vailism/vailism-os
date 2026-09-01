@@ -417,7 +417,7 @@ All services are mediated through the **System Call Interface**.
 - [x] **Phase 1 — Kernel Bring-Up**: Limine boot, x86_64 entry, higher-half mapping, 16550 UART serial driver, linear framebuffer console, 8x16 font renderer, QEMU runner.
 - [x] **Phase 2 — CPU & Interrupts**: GDT, 64-bit TSS, IDT (256 gates), 32 CPU exception handlers, 8259 PIC remapping, 8254 PIT timer (100 Hz), PS/2 keyboard driver with interactive echo.
 - [x] **Phase 3 — Memory Management**: Physical Memory Manager (PMM bitmap), 4-level paging Virtual Memory Manager (VMM), Kernel Heap allocator (`kmalloc`, `kfree`, `kcalloc`, `krealloc`).
-- [ ] **Phase 4 — Execution & Multitasking**: Process & Thread Control Blocks (PCB/TCB), CPU context switching (`switch_to`), preemptive timer-driven scheduler, kernel threads, cooperative yielding.
+- [x] **Phase 4 — Execution & Multitasking**: Process & Thread Control Blocks (PCB/TCB), CPU context switching (`context_switch`), preemptive timer-driven round-robin scheduler, non-blocking `thread_sleep()`, cooperative `yield()`, thread lifecycle management.
 - [ ] **Phase 5 — Storage & Filesystem**: IDE/ATA disk driver, Virtual Filesystem (VFS) abstraction, FAT32/Ext2 reader, file descriptors (`open`, `read`, `write`, `close`).
 - [ ] **Phase 6 — Userspace**: Ring 3 privilege transition, system call interface (`syscall`/`sysret`), ELF executable loader, freestanding C runtime (`libc`), interactive shell & core utilities.
 - [ ] **Phase 7 — Graphics & Desktop**: Linear framebuffer compositor, 2D graphics primitives, PS/2 mouse driver, floating window manager, desktop environment.
@@ -508,10 +508,10 @@ The project is dedicated to engineering a complete, self-contained operating sys
 
 ## 14. Current Status
 
-**Current Milestone:** Phase 3 Complete $\rightarrow$ Advancing to Phase 4 (Multitasking & Scheduler).
+**Current Milestone:** Phase 4 Complete $\rightarrow$ Advancing to Phase 5 (Storage & Filesystem).
 
 The system currently runs:
-$$\text{Firmware} \rightarrow \text{Limine} \rightarrow \text{64-bit Kernel} \rightarrow \text{GDT/TSS} \rightarrow \text{IDT/ISRs} \rightarrow \text{PIT/Keyboard} \rightarrow \text{PMM/VMM/Heap} \rightarrow \text{Interactive Terminal}$$
+$$\text{Firmware} \rightarrow \text{Limine} \rightarrow \text{64-bit Kernel} \rightarrow \text{GDT/TSS} \rightarrow \text{IDT/ISRs} \rightarrow \text{PIT/Keyboard} \rightarrow \text{PMM/VMM/Heap} \rightarrow \text{Preemptive Multitasking Scheduler}$$
 
 ---
 
