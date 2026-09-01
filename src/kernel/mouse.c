@@ -45,12 +45,8 @@ void mouse_handle_byte(uint8_t byte) {
 
             // Decode 3-byte packet
             uint8_t flags = g_mouse_packet[0];
-            int32_t dx = (int32_t)g_mouse_packet[1];
-            int32_t dy = (int32_t)g_mouse_packet[2];
-
-            // Sign extension
-            if (flags & 0x10) dx |= 0xFFFFFF00;
-            if (flags & 0x20) dy |= 0xFFFFFF00;
+            int32_t dx = (int8_t)g_mouse_packet[1];
+            int32_t dy = (int8_t)g_mouse_packet[2];
 
             // Discard overflow packets
             if (flags & 0xC0) return;
