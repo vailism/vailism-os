@@ -420,7 +420,7 @@ All services are mediated through the **System Call Interface**.
 - [x] **Phase 4 — Execution & Multitasking**: Process & Thread Control Blocks (PCB/TCB), CPU context switching (`context_switch`), preemptive timer-driven round-robin scheduler, non-blocking `thread_sleep()`, cooperative `yield()`, thread lifecycle management.
 - [x] **Phase 5 — Storage & Filesystem**: ATA/IDE hard disk driver (LBA28 PIO), Virtual Filesystem (VFS) abstraction, In-Memory Root Filesystem (RamFS), file descriptors, POSIX file API (`open`, `read`, `write`, `close`, `mkdir`).
 - [x] **Phase 6 — Userspace & Interactive Shell**: Fast x86_64 `syscall`/`sysret` MSR interface (`SYS_read`, `SYS_write`, `SYS_open`, `SYS_close`, `SYS_yield`, `SYS_sleep`, `SYS_reboot`), full interactive kernel shell with built-in commands (`help`, `clear`, `echo`, `ls`, `cat`, `mkdir`, `touch`, `write`, `mem`, `uname`, `reboot`).
-- [ ] **Phase 7 — Graphics & Desktop**: Linear framebuffer compositor, 2D graphics primitives, PS/2 mouse driver, floating window manager, desktop environment.
+- [x] **Phase 7 — Graphics, Mouse & Desktop GUI**: PS/2 mouse driver on IRQ12 (Vector 44), double-buffering compositor, 2D graphics primitives (gradients, shadows, outlines, font), floating window manager with draggable windows ("System Monitor", "Kernel Terminal", "File Explorer"), and live taskbar telemetry.
 
 ---
 
@@ -488,7 +488,7 @@ Vailism maintains dual independent debugging paths:
                                GDB
 ```
 
-- **Framebuffer**: For visual presentation, interactive shell, and terminal output.
+- **Framebuffer**: For visual presentation, interactive shell, desktop compositor, and terminal output.
 - **Serial (COM1)**: Rock-solid stream of telemetry and kernel crash traces.
 - **QEMU + GDB**: For instruction-level single-stepping and memory inspection.
 
@@ -508,10 +508,10 @@ The project is dedicated to engineering a complete, self-contained operating sys
 
 ## 14. Current Status
 
-**Current Milestone:** Phase 6 Complete $\rightarrow$ Advancing to Phase 7 (GUI, Window Manager & Desktop).
+**Current Milestone:** All 7 Core Phases Complete & Operational!
 
 The system currently runs:
-$$\text{Firmware} \rightarrow \text{Limine} \rightarrow \text{64-bit Kernel} \rightarrow \text{GDT/TSS} \rightarrow \text{IDT/ISRs} \rightarrow \text{PMM/VMM/Heap} \rightarrow \text{Scheduler} \rightarrow \text{VFS} \rightarrow \text{Syscalls} \rightarrow \text{Interactive Shell}$$
+$$\text{Firmware} \rightarrow \text{Limine} \rightarrow \text{64-bit Kernel} \rightarrow \text{GDT/TSS} \rightarrow \text{IDT/ISRs} \rightarrow \text{PMM/VMM/Heap} \rightarrow \text{Scheduler} \rightarrow \text{VFS} \rightarrow \text{Syscalls} \rightarrow \text{Shell} \rightarrow \text{Desktop GUI}$$
 
 ---
 

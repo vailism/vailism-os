@@ -14,6 +14,8 @@
 static char g_line_buffer[MAX_LINE_LEN];
 static size_t g_line_len = 0;
 
+#include "../include/gui.h"
+
 static void shell_prompt(void) {
     fb_set_color(FB_COLOR_CYAN, FB_COLOR_BG);
     fb_puts("vailism-os> ");
@@ -31,6 +33,7 @@ static void cmd_help(int argc, char **argv) {
     fb_set_color(FB_COLOR_WHITE, FB_COLOR_BG);
 
     fb_puts("  help                - Display this command manual\n");
+    fb_puts("  gui                 - Launch Desktop GUI & Window Manager\n");
     fb_puts("  clear               - Clear the terminal screen\n");
     fb_puts("  echo <text>         - Print text to screen\n");
     fb_puts("  ls [path]           - List files and directories\n");
@@ -242,8 +245,16 @@ static void cmd_uname(int argc, char **argv) {
     (void)argc;
     (void)argv;
     fb_set_color(FB_COLOR_GREEN, FB_COLOR_BG);
-    fb_puts("Vailism OS 0.6.0-alpha (x86_64 Long Mode Bare-Metal Kernel)\n");
+    fb_puts("Vailism OS 0.7.0-desktop (x86_64 Long Mode Bare-Metal Kernel)\n");
     fb_set_color(FB_COLOR_WHITE, FB_COLOR_BG);
+}
+
+static void cmd_gui(int argc, char **argv) {
+    (void)argc;
+    (void)argv;
+    fb_set_color(FB_COLOR_CYAN, FB_COLOR_BG);
+    fb_puts("Launching Desktop GUI Compositor...\n");
+    gui_run_desktop();
 }
 
 static void cmd_reboot(int argc, char **argv) {
@@ -283,6 +294,8 @@ void shell_execute_command(const char *cmdline) {
 
     if (strcmp(argv[0], "help") == 0) {
         cmd_help(argc, argv);
+    } else if (strcmp(argv[0], "gui") == 0) {
+        cmd_gui(argc, argv);
     } else if (strcmp(argv[0], "clear") == 0) {
         cmd_clear(argc, argv);
     } else if (strcmp(argv[0], "echo") == 0) {

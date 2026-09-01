@@ -16,6 +16,7 @@
 #include "../include/vfs.h"
 #include "../include/syscall.h"
 #include "../include/shell.h"
+#include "../include/gui.h"
 
 // 1. Tell Limine we support Base Revision 3
 __attribute__((used, section(".requests")))
@@ -257,19 +258,22 @@ void kmain(void) {
     // 9. Phase 6: System Call Interface & Interactive Shell
     syscall_init();
 
+    // 10. Phase 7: Desktop GUI, Window Manager & PS/2 Mouse
+    gui_init(fb);
+
     fb_set_color(FB_COLOR_GREEN, FB_COLOR_BG);
     fb_puts("[ OK ] ");
     fb_set_color(FB_COLOR_WHITE, FB_COLOR_BG);
-    fb_puts("Fast x86_64 syscall/sysret MSR interface registered\n\n");
+    fb_puts("Desktop GUI Compositor, Window Manager, and PS/2 Mouse active\n\n");
 
-    // 10. Enable CPU Interrupts (STI)
+    // 11. Enable CPU Interrupts (STI)
     __asm__ volatile ("sti");
     serial_puts("[CPU] Interrupts enabled globally (STI executed).\n");
 
     fb_set_color(FB_COLOR_YELLOW, FB_COLOR_BG);
-    fb_puts("Phase 6 Milestone Complete: Userspace ABI & Interactive Shell Active!\n");
+    fb_puts("Phase 7 Complete: Full x86_64 Operating System Stack Operational!\n");
     fb_set_color(FB_COLOR_MUTED, FB_COLOR_BG);
-    fb_puts("Type 'help' to see all available commands, 'cat /etc/os-release', 'mem', etc.:\n\n");
+    fb_puts("Type 'help' for commands, or type 'gui' to launch the Desktop GUI:\n\n");
 
     // Initialize Interactive Shell
     shell_init();
