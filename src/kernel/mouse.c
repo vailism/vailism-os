@@ -97,6 +97,11 @@ void mouse_init(uint32_t screen_width, uint32_t screen_height) {
     g_mouse_state.x = screen_width / 2;
     g_mouse_state.y = screen_height / 2;
 
+    // 0. Drain any stale bytes from port 0x60 to prevent packet desync
+    while (inb(0x64) & 0x01) {
+        inb(0x60);
+    }
+
     // 1. Enable Auxiliary Mouse Device on 8042 controller
     mouse_wait_write();
     outb(0x64, 0xA8);

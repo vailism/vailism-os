@@ -44,4 +44,14 @@ void fb_puts(const char *str);
  */
 void fb_set_color(uint32_t fg, uint32_t bg);
 
+/**
+ * Get the framebuffer width in pixels.
+ */
+uint32_t fb_get_width(void);
+
+/**
+ * Get the framebuffer height in pixels.
+ */
+uint32_t fb_get_height(void);
+
 #endif // FRAMEBUFFER_H

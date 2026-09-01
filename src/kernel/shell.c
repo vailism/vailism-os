@@ -6,44 +6,82 @@
 #include "../include/pmm.h"
 #include "../include/heap.h"
 #include "../include/scheduler.h"
+#include "../include/timer.h"
+#include "../include/gui.h"
 #include "../include/io.h"
 
 #define MAX_LINE_LEN 256
 #define MAX_ARGS     16
+#define MAX_HISTORY  8
 
 static char g_line_buffer[MAX_LINE_LEN];
 static size_t g_line_len = 0;
 
-#include "../include/gui.h"
+// Command history
+static char g_history[MAX_HISTORY][MAX_LINE_LEN];
+static int  g_history_count = 0;
+static int  g_history_index __attribute__((unused)) = -1;
+
+static void history_push(const char *cmd) {
+    if (g_history_count < MAX_HISTORY) {
+        strncpy(g_history[g_history_count], cmd, MAX_LINE_LEN - 1);
+        g_history[g_history_count][MAX_LINE_LEN - 1] = '\0';
+        g_history_count++;
+    } else {
+        // Shift up
+        for (int i = 0; i < MAX_HISTORY - 1; i++) {
+            strcpy(g_history[i], g_history[i + 1]);
+        }
+        strncpy(g_history[MAX_HISTORY - 1], cmd, MAX_LINE_LEN - 1);
+    }
+    g_history_index = -1;
+}
 
 static void shell_prompt(void) {
     fb_set_color(FB_COLOR_CYAN, FB_COLOR_BG);
-    fb_puts("vailism-os> ");
+    fb_puts("vailism-os");
+    fb_set_color(FB_COLOR_GREEN, FB_COLOR_BG);
+    fb_puts(":/ ");
     fb_set_color(FB_COLOR_WHITE, FB_COLOR_BG);
 
-    serial_puts("\nvailism-os> ");
+    serial_puts("\nvailism-os:/ ");
 }
+
+// ─── Built-in Commands ───────────────────────────────────────────────────────
 
 static void cmd_help(int argc, char **argv) {
     (void)argc;
     (void)argv;
 
     fb_set_color(FB_COLOR_YELLOW, FB_COLOR_BG);
-    fb_puts("Vailism OS Built-in Commands:\n");
+    fb_puts("Vailism OS Command Reference:\n");
     fb_set_color(FB_COLOR_WHITE, FB_COLOR_BG);
 
-    fb_puts("  help                - Display this command manual\n");
-    fb_puts("  gui                 - Launch Desktop GUI & Window Manager\n");
-    fb_puts("  clear               - Clear the terminal screen\n");
-    fb_puts("  echo <text>         - Print text to screen\n");
-    fb_puts("  ls [path]           - List files and directories\n");
-    fb_puts("  cat <path>          - Display contents of a file\n");
-    fb_puts("  mkdir <path>        - Create a new directory\n");
-    fb_puts("  touch <path>        - Create an empty file\n");
-    fb_puts("  write <path> <text> - Write text into a file\n");
-    fb_puts("  mem                 - Show memory allocation telemetry\n");
-    fb_puts("  uname               - Display operating system release info\n");
-    fb_puts("  reboot              - Restart the computer\n");
+    fb_set_color(FB_COLOR_CYAN, FB_COLOR_BG);
+    fb_puts("\n  Navigation & Files:\n");
+    fb_set_color(FB_COLOR_WHITE, FB_COLOR_BG);
+    fb_puts("    ls [path]           - List directory contents\n");
+    fb_puts("    cat <path>          - Display file contents\n");
+    fb_puts("    mkdir <path>        - Create a new directory\n");
+    fb_puts("    touch <path>        - Create an empty file\n");
+    fb_puts("    write <path> <text> - Write text into a file\n");
+
+    fb_set_color(FB_COLOR_CYAN, FB_COLOR_BG);
+    fb_puts("\n  System Information:\n");
+    fb_set_color(FB_COLOR_WHITE, FB_COLOR_BG);
+    fb_puts("    uname               - Display OS release info\n");
+    fb_puts("    mem                 - Physical memory telemetry\n");
+    fb_puts("    ps                  - List active kernel threads\n");
+    fb_puts("    uptime              - System uptime since boot\n");
+
+    fb_set_color(FB_COLOR_CYAN, FB_COLOR_BG);
+    fb_puts("\n  Desktop & System:\n");
+    fb_set_color(FB_COLOR_WHITE, FB_COLOR_BG);
+    fb_puts("    gui                 - Launch Desktop GUI & Window Manager\n");
+    fb_puts("    clear               - Clear the terminal screen\n");
+    fb_puts("    echo <text>         - Print text to screen\n");
+    fb_puts("    help                - Display this command reference\n");
+    fb_puts("    reboot              - Restart the computer\n");
 }
 
 static void cmd_clear(int argc, char **argv) {
@@ -79,10 +117,13 @@ static void cmd_ls(int argc, char **argv) {
 
     vfs_node_t *curr = dir->children;
     if (!curr) {
+        fb_set_color(FB_COLOR_MUTED, FB_COLOR_BG);
         fb_puts("(empty directory)\n");
+        fb_set_color(FB_COLOR_WHITE, FB_COLOR_BG);
         return;
     }
 
+    int count = 0;
     while (curr) {
         if (curr->type == VFS_DIRECTORY) {
             fb_set_color(FB_COLOR_CYAN, FB_COLOR_BG);
@@ -92,9 +133,23 @@ static void cmd_ls(int argc, char **argv) {
             fb_puts("[FILE] ");
         }
         fb_puts(curr->name);
+
+        // Show file size
+        if (curr->type == VFS_FILE) {
+            char size_buf[32];
+            fb_set_color(FB_COLOR_MUTED, FB_COLOR_BG);
+            ksnprintf(size_buf, sizeof(size_buf), "  (%u bytes)", (uint64_t)curr->size);
+            fb_puts(size_buf);
+        }
+
         fb_puts("\n");
         curr = curr->next;
+        count++;
     }
+    fb_set_color(FB_COLOR_MUTED, FB_COLOR_BG);
+    char count_buf[32];
+    ksnprintf(count_buf, sizeof(count_buf), "  %d entries total\n", (int64_t)count);
+    fb_puts(count_buf);
     fb_set_color(FB_COLOR_WHITE, FB_COLOR_BG);
 }
 
@@ -137,13 +192,13 @@ static void cmd_mkdir(int argc, char **argv) {
 
     if (!vfs_mkdir(argv[1])) {
         fb_set_color(FB_COLOR_RED, FB_COLOR_BG);
-        fb_puts("mkdir: failed to create directory '");
+        fb_puts("mkdir: failed to create '");
         fb_puts(argv[1]);
         fb_puts("'\n");
         fb_set_color(FB_COLOR_WHITE, FB_COLOR_BG);
     } else {
         fb_set_color(FB_COLOR_GREEN, FB_COLOR_BG);
-        fb_puts("Directory created: ");
+        fb_puts("Created: ");
         fb_puts(argv[1]);
         fb_puts("\n");
         fb_set_color(FB_COLOR_WHITE, FB_COLOR_BG);
@@ -162,7 +217,7 @@ static void cmd_touch(int argc, char **argv) {
     if (fd >= 0) {
         vfs_close(fd);
         fb_set_color(FB_COLOR_GREEN, FB_COLOR_BG);
-        fb_puts("Created file: ");
+        fb_puts("Created: ");
         fb_puts(argv[1]);
         fb_puts("\n");
         fb_set_color(FB_COLOR_WHITE, FB_COLOR_BG);
@@ -203,42 +258,96 @@ static void cmd_write(int argc, char **argv) {
     vfs_close(fd);
 
     fb_set_color(FB_COLOR_GREEN, FB_COLOR_BG);
-    fb_puts("Wrote text into: ");
+    fb_puts("Wrote to: ");
     fb_puts(argv[1]);
     fb_puts("\n");
     fb_set_color(FB_COLOR_WHITE, FB_COLOR_BG);
-}
-
-static void print_number(uint64_t val) {
-    char buf[32];
-    int i = 0;
-    if (val == 0) {
-        fb_putchar('0');
-        return;
-    }
-    while (val > 0) {
-        buf[i++] = (char)('0' + (val % 10));
-        val /= 10;
-    }
-    for (int j = i - 1; j >= 0; j--) {
-        fb_putchar(buf[j]);
-    }
 }
 
 static void cmd_mem(int argc, char **argv) {
     (void)argc;
     (void)argv;
 
-    uint64_t total_mb = pmm_get_total_memory() / (1024 * 1024);
-    uint64_t free_mb  = pmm_get_free_memory() / (1024 * 1024);
-    uint64_t used_mb  = pmm_get_used_memory() / (1024 * 1024);
+    uint64_t total = pmm_get_total_memory();
+    uint64_t free  = pmm_get_free_memory();
+    uint64_t used  = pmm_get_used_memory();
+    char buf[128];
 
     fb_set_color(FB_COLOR_PURPLE, FB_COLOR_BG);
-    fb_puts("System Memory Telemetry:\n");
+    fb_puts("Physical Memory:\n");
     fb_set_color(FB_COLOR_WHITE, FB_COLOR_BG);
-    fb_puts("  Total Physical Memory: "); print_number(total_mb); fb_puts(" MB\n");
-    fb_puts("  Used Physical Memory:  "); print_number(used_mb);  fb_puts(" MB\n");
-    fb_puts("  Free Physical Memory:  "); print_number(free_mb);  fb_puts(" MB\n");
+
+    ksnprintf(buf, sizeof(buf), "  Total: %u MB (%u bytes)\n", (uint64_t)(total / (1024 * 1024)), total);
+    fb_puts(buf);
+    ksnprintf(buf, sizeof(buf), "  Used:  %u MB (%u bytes)\n", (uint64_t)(used / (1024 * 1024)), used);
+    fb_puts(buf);
+    ksnprintf(buf, sizeof(buf), "  Free:  %u MB (%u bytes)\n", (uint64_t)(free / (1024 * 1024)), free);
+    fb_puts(buf);
+
+    // Visual bar
+    uint32_t bar_len = 40;
+    uint32_t used_len = (total > 0) ? (uint32_t)((used * bar_len) / total) : 0;
+    if (used_len < 1) used_len = 1;
+
+    fb_set_color(FB_COLOR_MUTED, FB_COLOR_BG);
+    fb_puts("  [");
+    for (uint32_t i = 0; i < bar_len; i++) {
+        if (i < used_len) {
+            fb_set_color(FB_COLOR_CYAN, FB_COLOR_BG);
+            fb_putchar('#');
+        } else {
+            fb_set_color(FB_COLOR_MUTED, FB_COLOR_BG);
+            fb_putchar('-');
+        }
+    }
+    fb_set_color(FB_COLOR_MUTED, FB_COLOR_BG);
+    fb_puts("]\n");
+    fb_set_color(FB_COLOR_WHITE, FB_COLOR_BG);
+}
+
+static void cmd_ps(int argc, char **argv) {
+    (void)argc;
+    (void)argv;
+
+    fb_set_color(FB_COLOR_PURPLE, FB_COLOR_BG);
+    fb_puts("Active Kernel Threads:\n");
+    fb_set_color(FB_COLOR_MUTED, FB_COLOR_BG);
+    fb_puts("  TID  STATE       NAME\n");
+    fb_set_color(FB_COLOR_WHITE, FB_COLOR_BG);
+
+    // Access thread table via scheduler (we expose get_current_thread)
+    // For now display what we know about the main and worker threads
+    thread_t *current = get_current_thread();
+    if (current) {
+        char buf[128];
+        ksnprintf(buf, sizeof(buf), "  %u    RUNNING     %s (current)\n",
+                  (uint64_t)current->tid, current->name);
+        fb_set_color(FB_COLOR_GREEN, FB_COLOR_BG);
+        fb_puts(buf);
+        fb_set_color(FB_COLOR_WHITE, FB_COLOR_BG);
+    }
+
+    fb_set_color(FB_COLOR_MUTED, FB_COLOR_BG);
+    fb_puts("  (Only current thread visible in this view)\n");
+    fb_set_color(FB_COLOR_WHITE, FB_COLOR_BG);
+}
+
+static void cmd_uptime(int argc, char **argv) {
+    (void)argc;
+    (void)argv;
+
+    uint64_t ticks = timer_get_ticks();
+    uint64_t total_secs = ticks / 100;
+    uint64_t hours = total_secs / 3600;
+    uint64_t mins  = (total_secs % 3600) / 60;
+    uint64_t secs  = total_secs % 60;
+    char buf[64];
+
+    fb_set_color(FB_COLOR_GREEN, FB_COLOR_BG);
+    ksnprintf(buf, sizeof(buf), "Uptime: %uh %um %us (%u ticks @ 100 Hz)\n",
+              (uint64_t)hours, (uint64_t)mins, (uint64_t)secs, (uint64_t)ticks);
+    fb_puts(buf);
+    fb_set_color(FB_COLOR_WHITE, FB_COLOR_BG);
 }
 
 static void cmd_uname(int argc, char **argv) {
@@ -267,8 +376,12 @@ static void cmd_reboot(int argc, char **argv) {
     for (;;) { __asm__ volatile ("hlt"); }
 }
 
+// ─── Command Dispatcher ─────────────────────────────────────────────────────
+
 void shell_execute_command(const char *cmdline) {
     if (!cmdline || strlen(cmdline) == 0) return;
+
+    history_push(cmdline);
 
     char buf[MAX_LINE_LEN];
     strncpy(buf, cmdline, MAX_LINE_LEN - 1);
@@ -312,13 +425,17 @@ void shell_execute_command(const char *cmdline) {
         cmd_write(argc, argv);
     } else if (strcmp(argv[0], "mem") == 0) {
         cmd_mem(argc, argv);
+    } else if (strcmp(argv[0], "ps") == 0) {
+        cmd_ps(argc, argv);
+    } else if (strcmp(argv[0], "uptime") == 0) {
+        cmd_uptime(argc, argv);
     } else if (strcmp(argv[0], "uname") == 0) {
         cmd_uname(argc, argv);
     } else if (strcmp(argv[0], "reboot") == 0) {
         cmd_reboot(argc, argv);
     } else {
         fb_set_color(FB_COLOR_RED, FB_COLOR_BG);
-        fb_puts("Unknown command: '");
+        fb_puts("Command not found: '");
         fb_puts(argv[0]);
         fb_puts("'. Type 'help' for available commands.\n");
         fb_set_color(FB_COLOR_WHITE, FB_COLOR_BG);
@@ -359,7 +476,16 @@ void shell_handle_char(char c) {
 
 void shell_init(void) {
     g_line_len = 0;
+    g_history_count = 0;
+    g_history_index = -1;
     memset(g_line_buffer, 0, sizeof(g_line_buffer));
+
+    fb_set_color(FB_COLOR_YELLOW, FB_COLOR_BG);
+    fb_puts("Welcome to Vailism OS Interactive Shell\n");
+    fb_set_color(FB_COLOR_MUTED, FB_COLOR_BG);
+    fb_puts("Type 'help' for available commands, 'gui' for Desktop GUI\n\n");
+    fb_set_color(FB_COLOR_WHITE, FB_COLOR_BG);
+
     shell_prompt();
     serial_puts("[SHELL] Interactive Shell initialized.\n");
 }

@@ -60,7 +60,7 @@ static void heap_expand(size_t pages) {
 
 void heap_init(void) {
     heap_expand(KERNEL_HEAP_INITIAL_PAGES);
-    serial_puts("[HEAP] Kernel heap initialized with 64 KiB dynamic memory pool.\n");
+    serial_puts("[HEAP] Kernel heap initialized with 4 MiB dynamic memory pool.\n");
 }
 
 void *kmalloc(size_t size) {

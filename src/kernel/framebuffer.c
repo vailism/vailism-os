@@ -131,3 +131,11 @@ void fb_puts(const char *str) {
         fb_putchar(str[i]);
     }
 }
+
+uint32_t fb_get_width(void) {
+    return g_width;
+}
+
+uint32_t fb_get_height(void) {
+    return g_height;
+}

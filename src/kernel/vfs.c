@@ -302,7 +302,7 @@ void vfs_init(void) {
     // 3. Populate default system configuration files
     const char *os_release =
         "NAME=\"Vailism OS\"\n"
-        "VERSION=\"0.5.0-alpha\"\n"
+        "VERSION=\"0.7.0-desktop\"\n"
         "ID=vailism\n"
         "PRETTY_NAME=\"Vailism OS (x86_64)\"\n"
         "ARCH=\"x86_64\"\n"

@@ -4,7 +4,7 @@
 #include "types.h"
 
 #define KERNEL_HEAP_START 0xffffffffc0000000ULL
-#define KERNEL_HEAP_INITIAL_PAGES 16 // 64 KiB initial heap
+#define KERNEL_HEAP_INITIAL_PAGES 1024 // 4 MiB initial heap (GUI backbuffer needs ~3.6 MiB)
 
 /**
  * Initialize kernel heap allocator and map initial memory pages.
