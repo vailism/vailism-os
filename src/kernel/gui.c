@@ -355,16 +355,45 @@ void gui_init(struct limine_framebuffer *fb) {
         g_backbuffer = g_frontbuffer;
     }
 
+    char gui_diag[128];
+    serial_puts("\n========================================\n");
+    serial_puts("          GUI DIAGNOSTICS\n");
+    serial_puts("========================================\n");
+    ksnprintf(gui_diag, sizeof(gui_diag), "GUI width:       %u\n", (uint64_t)g_screen_w);
+    serial_puts(gui_diag);
+    ksnprintf(gui_diag, sizeof(gui_diag), "GUI height:      %u\n", (uint64_t)g_screen_h);
+    serial_puts(gui_diag);
+    ksnprintf(gui_diag, sizeof(gui_diag), "GUI pitch_pixels:%u\n", (uint64_t)g_pitch_pixels);
+    serial_puts(gui_diag);
+    ksnprintf(gui_diag, sizeof(gui_diag), "Backbuffer size: %u bytes (%u MB)\n", (uint64_t)bb_size, (uint64_t)(bb_size / (1024 * 1024)));
+    serial_puts(gui_diag);
+    serial_puts("========================================\n\n");
+
     mouse_init(g_screen_w, g_screen_h);
 
-    // Create Generously Sized Desktop Windows
-    gui_create_window(40,  60,  540, 380, "System Monitor",  render_sysinfo_window);
-    gui_create_window(460, 80,  520, 420, "Kernel Terminal", render_terminal_window);
-    gui_create_window(120, 320, 500, 360, "File Explorer",   render_files_window);
+    // Create Desktop Windows positioned proportionally to screen dimensions
+    uint32_t win1_w = (g_screen_w > 900) ? 500 : (g_screen_w * 48) / 100;
+    uint32_t win1_h = (g_screen_h > 700) ? 360 : (g_screen_h * 48) / 100;
+    uint32_t win1_x = 32;
+    uint32_t win1_y = TOPBAR_HEIGHT + 24;
+
+    uint32_t win2_w = (g_screen_w > 900) ? 520 : (g_screen_w * 48) / 100;
+    uint32_t win2_h = (g_screen_h > 700) ? 380 : (g_screen_h * 50) / 100;
+    uint32_t win2_x = g_screen_w - win2_w - 32;
+    uint32_t win2_y = TOPBAR_HEIGHT + 36;
+
+    uint32_t win3_w = (g_screen_w > 900) ? 480 : (g_screen_w * 46) / 100;
+    uint32_t win3_h = (g_screen_h > 700) ? 320 : (g_screen_h * 42) / 100;
+    uint32_t win3_x = (g_screen_w / 2) - (win3_w / 2);
+    uint32_t win3_y = g_screen_h - TASKBAR_HEIGHT - win3_h - 24;
+
+    gui_create_window(win1_x, win1_y, win1_w, win1_h, "System Monitor",  render_sysinfo_window);
+    gui_create_window(win2_x, win2_y, win2_w, win2_h, "Kernel Terminal", render_terminal_window);
+    gui_create_window(win3_x, win3_y, win3_w, win3_h, "File Explorer",   render_files_window);
 
     g_active_window = &g_windows[1];
 
-    serial_puts("[GUI] High-Contrast Desktop Compositor initialized.\n");
+    serial_puts("[GUI] Proportional Desktop Compositor initialized.\n");
 }
 
 void gui_handle_mouse(void) {

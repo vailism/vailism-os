@@ -92,6 +92,32 @@ void kmain(void) {
     }
 
     struct limine_framebuffer *fb = framebuffer_request.response->framebuffers[0];
+
+    // Framebuffer Diagnostics output
+    serial_puts("\n========================================\n");
+    serial_puts("       FRAMEBUFFER DIAGNOSTICS\n");
+    serial_puts("========================================\n");
+    char diag[128];
+    ksnprintf(diag, sizeof(diag), "FB address:    0x%x\n", (uint64_t)fb->address);
+    serial_puts(diag);
+    ksnprintf(diag, sizeof(diag), "FB width:      %u\n", (uint64_t)fb->width);
+    serial_puts(diag);
+    ksnprintf(diag, sizeof(diag), "FB height:     %u\n", (uint64_t)fb->height);
+    serial_puts(diag);
+    ksnprintf(diag, sizeof(diag), "FB pitch:      %u bytes (%u uint32 pixels per line)\n", (uint64_t)fb->pitch, (uint64_t)(fb->pitch / 4));
+    serial_puts(diag);
+    ksnprintf(diag, sizeof(diag), "FB bpp:        %u\n", (uint64_t)fb->bpp);
+    serial_puts(diag);
+    ksnprintf(diag, sizeof(diag), "FB memory_mod: %u\n", (uint64_t)fb->memory_model);
+    serial_puts(diag);
+    ksnprintf(diag, sizeof(diag), "FB red mask:   size=%u shift=%u\n", (uint64_t)fb->red_mask_size, (uint64_t)fb->red_mask_shift);
+    serial_puts(diag);
+    ksnprintf(diag, sizeof(diag), "FB green mask: size=%u shift=%u\n", (uint64_t)fb->green_mask_size, (uint64_t)fb->green_mask_shift);
+    serial_puts(diag);
+    ksnprintf(diag, sizeof(diag), "FB blue mask:  size=%u shift=%u\n", (uint64_t)fb->blue_mask_size, (uint64_t)fb->blue_mask_shift);
+    serial_puts(diag);
+    serial_puts("========================================\n\n");
+
     fb_init(fb);
 
     // Boot Banner
