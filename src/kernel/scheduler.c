@@ -111,16 +111,26 @@ void scheduler_schedule(void) {
 
     // If no other thread is ready, continue running current thread if it's still runnable
     if (!next) {
-        if (prev->state == THREAD_RUNNING) {
+        if (prev->state == THREAD_RUNNING || prev->state == THREAD_READY) {
+            prev->state = THREAD_RUNNING;
             prev->time_slice = DEFAULT_TIME_SLICE;
             return;
         }
-        // If current thread is not runnable, switch to Idle Thread (Thread 0)
+        // If current thread is sleeping, wait for timer interrupt
+        if (prev->state == THREAD_SLEEPING) {
+            while (timer_get_ticks() < prev->sleep_until_ticks) {
+                __asm__ volatile ("sti; hlt");
+            }
+            prev->state = THREAD_RUNNING;
+            prev->time_slice = DEFAULT_TIME_SLICE;
+            return;
+        }
         next = &g_threads[0];
     }
 
-    if (next == prev && prev->state == THREAD_RUNNING) {
-        prev->time_slice = DEFAULT_TIME_SLICE;
+    if (next == prev) {
+        next->state = THREAD_RUNNING;
+        next->time_slice = DEFAULT_TIME_SLICE;
         return;
     }
 

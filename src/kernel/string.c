@@ -148,6 +148,38 @@ int ksnprintf(char *buf, size_t size, const char *fmt, ...) {
         if (fmt[i] == '%' && fmt[i + 1] != '\0') {
             i++;
             switch (fmt[i]) {
+                case '0': {
+                    int pad_width = 0;
+                    while (fmt[i] >= '0' && fmt[i] <= '9') {
+                        pad_width = pad_width * 10 + (fmt[i] - '0');
+                        i++;
+                    }
+                    char spec = fmt[i];
+                    char tmp[64];
+                    if (spec == 'd') {
+                        int64_t val = va_arg(args, int64_t);
+                        itoa(val, tmp, 10);
+                    } else if (spec == 'u') {
+                        uint64_t val = va_arg(args, uint64_t);
+                        utoa(val, tmp, 10);
+                    } else if (spec == 'x') {
+                        uint64_t val = va_arg(args, uint64_t);
+                        utoa(val, tmp, 16);
+                    } else {
+                        tmp[0] = spec;
+                        tmp[1] = '\0';
+                    }
+                    int len = 0;
+                    while (tmp[len]) len++;
+                    while (len < pad_width && pos < size - 1) {
+                        buf[pos++] = '0';
+                        pad_width--;
+                    }
+                    for (int j = 0; tmp[j] && pos < size - 1; j++) {
+                        buf[pos++] = tmp[j];
+                    }
+                    break;
+                }
                 case 's': {
                     const char *s = va_arg(args, const char *);
                     if (!s) s = "(null)";
