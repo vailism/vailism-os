@@ -32,6 +32,10 @@ static const char scancode_ascii_uppercase[128] = {
 
 static void keyboard_callback(struct registers *regs) {
     (void)regs;
+    uint8_t status = inb(0x64);
+    if ((status & 0x01) == 0) return; // No data in buffer
+    if ((status & 0x20) != 0) return; // Data belongs to mouse auxiliary device, do not consume!
+
     uint8_t scancode = inb(KEYBOARD_DATA_PORT);
 
     // Key Release (Break Code: bit 7 set)

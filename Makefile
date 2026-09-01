@@ -101,10 +101,15 @@ $(ISO): $(KERNEL) limine.conf
 
 iso: $(ISO)
 
-# Run OS in QEMU with GUI window and serial output forwarded to terminal
+# Run OS in QEMU with GUI window and serial output forwarded to terminal (scaled proportionally)
 run: $(ISO)
-	@echo "Starting Vailism OS in QEMU (Press Ctrl+C in terminal or close window to exit)..."
-	$(QEMU) -cdrom $(ISO) -serial stdio -m 512M -vga std
+	@echo "Starting Vailism OS in QEMU (Click inside window to capture mouse/trackpad, Ctrl+Alt+G to release)..."
+	$(QEMU) -cdrom $(ISO) -serial stdio -m 512M -vga std -display cocoa,show-cursor=on,zoom-to-fit=on
+
+# Run OS in Fullscreen QEMU (scaled to entire display)
+run-fullscreen: $(ISO)
+	@echo "Starting Vailism OS in Fullscreen QEMU..."
+	$(QEMU) -cdrom $(ISO) -serial stdio -m 512M -vga std -full-screen -display cocoa,show-cursor=on,zoom-to-fit=on
 
 # Run OS in headless/nographic mode (serial only)
 run-nographic: $(ISO)
