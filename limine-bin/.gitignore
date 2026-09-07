@@ -1,0 +1,3 @@
+# Limine CLI source files (only binaries are tracked)
+limine.c
+limine-bios-hdd.h
