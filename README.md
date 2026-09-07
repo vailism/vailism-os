@@ -559,6 +559,21 @@ KERNEL ENTRY
 
 ---
 
+## 👥 Contributors
+
+Thanks to the contributors who have helped build and improve **Vailism OS**:
+
+<a href="https://github.com/ashbornn29">
+  <img src="https://github.com/ashbornn29.png?size=100" width="100px;" alt="ashbornn29" />
+  <br />
+  <sub><b>ashbornn29</b></sub>
+</a>
+
+- [**ashbornn29**](https://github.com/ashbornn29)
+
+---
+
 ## 📄 License
 
 Vailism OS is licensed under the [MIT License](LICENSE).
+
